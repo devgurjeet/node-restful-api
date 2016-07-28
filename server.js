@@ -10,6 +10,7 @@ app.use(bodyParser.urlencoded({
   extended: true
 }));
 
+mongoose.Promise = global.Promise;
 /* conntect to database */
 mongoose.connect('mongodb://localhost:27017/userdb');
 
@@ -21,6 +22,13 @@ var router = express.Router();
 router.use(function(req, res, next) {
 	console.log("In Middleware!");
 	console.log(req.body);
+	var _send = res.send;
+    var sent = false;
+    res.send = function(data){
+        if(sent) return;
+        _send.bind(res)(data);
+        sent = true;
+    };
 	next();
 });
 
@@ -68,16 +76,23 @@ router.route('/users/:user_id')
 	        // use our User model to find the User we want
 	        User.findById(req.params.user_id, function(err, user) {
 
-	            if (err)
+	            if (err){
+	            	res.statusCode = 404;
 	                res.send(err);
+	            }
 
-	            user.name    = req.body.name;  // update the users info
-	            user.updated = Date.now();
+				user.name      = req.body.name;  // update the users info
+				user.email     = req.body.email;  // update the users info
+				user.password  = req.body.password;  // update the users info
+				user.updated   = Date.now();
 
 	            // save the User
 	            user.save(function(err) {
-	                if (err)
+	                if (err){
+	                	res.statusCode = 404;
 	                    res.send(err);
+	                    // throw err;
+	                }
 
 	                res.json({ message: 'User updated!' });
 	            });
